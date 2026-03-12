@@ -1,5 +1,8 @@
 # go-common
 
+A simple little go library of utils I use in just about every go project from small to large.
+
+
 [![CI](https://github.com/wispberry-tech/go-common/actions/workflows/ci.yml/badge.svg)](https://github.com/wispberry-tech/go-common/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/wispberry-tech/go-common)](https://goreportcard.com/report/github.com/wispberry-tech/go-common)
 [![Go Reference](https://pkg.go.dev/badge/github.com/wispberry-tech/go-common.svg)](https://pkg.go.dev/github.com/wispberry-tech/go-common)
