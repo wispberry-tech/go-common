@@ -15,6 +15,16 @@ import (
 	"time"
 )
 
+// Common error code constants for use with WriteJSONError.
+const (
+	ErrCodeValidationError = "VALIDATION_ERROR"
+	ErrCodeInvalidJSON     = "INVALID_JSON"
+	ErrCodeNotFound        = "NOT_FOUND"
+	ErrCodeUnauthorized    = "UNAUTHORIZED"
+	ErrCodeForbidden       = "FORBIDDEN"
+	ErrCodeInternalError   = "INTERNAL_ERROR"
+)
+
 // ResponseEnvelope wraps API responses in a consistent JSON structure.
 // All responses include an optional Data, Error, and Meta field.
 type ResponseEnvelope struct {
@@ -116,11 +126,78 @@ func ParseQueryBool(r *http.Request, key string, defaultValue bool) bool {
 	if value == "" {
 		return defaultValue
 	}
-	lowerValue := strings.ToLower(value)
-	if lowerValue == "true" || lowerValue == "1" || lowerValue == "yes" {
+	switch strings.ToLower(value) {
+	case "true", "1", "yes":
 		return true
-	} else if lowerValue == "false" || lowerValue == "0" || lowerValue == "no" {
+	case "false", "0", "no":
 		return false
+	default:
+		return defaultValue
 	}
-	return defaultValue
+}
+
+// ParseQueryFloat64 extracts a float64 from query parameters.
+// Returns defaultValue if the key is missing or invalid.
+func ParseQueryFloat64(r *http.Request, key string, defaultValue float64) float64 {
+	value := r.FormValue(key)
+	if value == "" {
+		return defaultValue
+	}
+	f, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return defaultValue
+	}
+	return f
+}
+
+// ParseQueryInt64 extracts an int64 from query parameters.
+// Returns defaultValue if the key is missing or invalid.
+func ParseQueryInt64(r *http.Request, key string, defaultValue int64) int64 {
+	value := r.FormValue(key)
+	if value == "" {
+		return defaultValue
+	}
+	i, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+	return i
+}
+
+// ParseQueryStringSlice extracts a string slice from query parameters.
+// Supports repeated keys (e.g., ?tag=a&tag=b). Returns nil if the key is missing.
+func ParseQueryStringSlice(r *http.Request, key string) []string {
+	if err := r.ParseForm(); err != nil {
+		return nil
+	}
+	values, ok := r.Form[key]
+	if !ok {
+		return nil
+	}
+	return values
+}
+
+// PaginationParams holds parsed pagination query parameters.
+type PaginationParams struct {
+	Limit  int
+	Offset int
+}
+
+// ParsePaginationParams extracts "limit" and "offset" from query parameters.
+// Limit is clamped to [1, maxLimit]. Defaults: limit=defaultLimit, offset=0.
+func ParsePaginationParams(r *http.Request, defaultLimit, maxLimit int) PaginationParams {
+	limit := ParseQueryInt(r, "limit", defaultLimit)
+	offset := ParseQueryInt(r, "offset", 0)
+
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	return PaginationParams{Limit: limit, Offset: offset}
 }

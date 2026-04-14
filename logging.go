@@ -8,22 +8,77 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// loggerConfig holds configuration for the logger.
+type loggerConfig struct {
+	level           log.Level
+	timeFormat      string
+	reportCaller    bool
+	reportTimestamp bool
+}
+
+// LoggerOption configures the logger when passed to InitializeLogger.
+type LoggerOption func(*loggerConfig)
+
+// WithLevel sets the initial log level. Supports: "debug", "info", "warn", "error".
+func WithLevel(level string) LoggerOption {
+	return func(cfg *loggerConfig) {
+		switch level {
+		case "debug":
+			cfg.level = log.DebugLevel
+		case "info":
+			cfg.level = log.InfoLevel
+		case "warn":
+			cfg.level = log.WarnLevel
+		case "error":
+			cfg.level = log.ErrorLevel
+		}
+	}
+}
+
+// WithTimeFormat sets the time format string for log timestamps.
+func WithTimeFormat(format string) LoggerOption {
+	return func(cfg *loggerConfig) {
+		cfg.timeFormat = format
+	}
+}
+
+// WithCaller enables or disables caller reporting in log output.
+func WithCaller(enabled bool) LoggerOption {
+	return func(cfg *loggerConfig) {
+		cfg.reportCaller = enabled
+	}
+}
+
+// WithTimestamp enables or disables timestamps in log output.
+func WithTimestamp(enabled bool) LoggerOption {
+	return func(cfg *loggerConfig) {
+		cfg.reportTimestamp = enabled
+	}
+}
+
 // InitializeLogger configures the global charmbracelet/log logger
 // for beautiful, colorized output with proper formatting.
 // This should be called once at application startup.
-func InitializeLogger() {
-	// Create a logger with custom options
+// Options can be passed to override defaults.
+func InitializeLogger(opts ...LoggerOption) {
+	cfg := loggerConfig{
+		level:           log.InfoLevel,
+		timeFormat:      "15:04:05",
+		reportCaller:    true,
+		reportTimestamp: true,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	logger := log.NewWithOptions(os.Stderr, log.Options{
-		TimeFormat:      "15:04:05",
-		ReportCaller:    true,
-		ReportTimestamp: true,
-		Level:           log.InfoLevel,
+		TimeFormat:      cfg.timeFormat,
+		ReportCaller:    cfg.reportCaller,
+		ReportTimestamp: cfg.reportTimestamp,
+		Level:           cfg.level,
 	})
 
-	// Set custom styles for better readability
 	logger.SetStyles(getLogStyles())
-
-	// Set as the default global logger
 	log.SetDefault(logger)
 }
 
