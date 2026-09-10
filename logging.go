@@ -3,9 +3,11 @@ package common
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/mattn/go-isatty"
 )
 
 // loggerConfig holds configuration for the logger.
@@ -79,6 +81,20 @@ func InitializeLogger(opts ...LoggerOption) {
 	})
 
 	logger.SetStyles(getLogStyles())
+
+	switch os.Getenv("LOG_FORMAT") {
+	case "json":
+		logger.SetFormatter(log.JSONFormatter)
+	case "text":
+		// Keep the default colored text formatter.
+	default:
+		// Auto-detect: JSON when stderr is not a terminal (e.g. in
+		// containers/CI), colored text otherwise.
+		if !isatty.IsTerminal(os.Stderr.Fd()) {
+			logger.SetFormatter(log.JSONFormatter)
+		}
+	}
+
 	log.SetDefault(logger)
 }
 
@@ -156,42 +172,50 @@ func getLogStyles() *log.Styles {
 
 // LogError logs an error message with optional key-value pairs.
 func LogError(msg interface{}, keyvals ...interface{}) {
+	log.Default().Helper()
 	keyvals = append(keyvals, "error", msg)
 	log.Error(msg, keyvals...)
 }
 
 // LogInfo logs an info message with optional key-value pairs.
 func LogInfo(msg interface{}, keyvals ...interface{}) {
+	log.Default().Helper()
 	log.Info(msg, keyvals...)
 }
 
 // LogDebug logs a debug message with optional key-value pairs.
 func LogDebug(msg interface{}, keyvals ...interface{}) {
+	log.Default().Helper()
 	log.Debug(msg, keyvals...)
 }
 
 // LogWarn logs a warning message with optional key-value pairs.
 func LogWarn(msg interface{}, keyvals ...interface{}) {
+	log.Default().Helper()
 	log.Warn(msg, keyvals...)
 }
 
 // LogErrorf logs a formatted error message.
 func LogErrorf(format string, args ...interface{}) {
+	log.Default().Helper()
 	log.Errorf(format, args...)
 }
 
 // LogInfof logs a formatted info message.
 func LogInfof(format string, args ...interface{}) {
+	log.Default().Helper()
 	log.Infof(format, args...)
 }
 
 // LogDebugf logs a formatted debug message.
 func LogDebugf(format string, args ...interface{}) {
+	log.Default().Helper()
 	log.Debugf(format, args...)
 }
 
 // LogWarnf logs a formatted warning message.
 func LogWarnf(format string, args ...interface{}) {
+	log.Default().Helper()
 	log.Warnf(format, args...)
 }
 
@@ -207,10 +231,33 @@ func WithContext(ctx context.Context, logger *log.Logger) context.Context {
 
 // Print logs a message at info level.
 func Print(msg interface{}, keyvals ...interface{}) {
+	log.Default().Helper()
 	log.Print(msg, keyvals...)
 }
 
 // Printf logs a formatted message at info level.
 func Printf(format string, args ...interface{}) {
+	log.Default().Helper()
 	log.Printf(format, args...)
+}
+
+// TrimSQL collapses runs of whitespace (tabs, newlines, spaces) into a single
+// space and trims leading/trailing whitespace. When maxLen is greater than
+// zero and the collapsed string is longer, it is truncated rune-safely (a
+// UTF-8 codepoint is never split) and a trailing "…" is appended within the
+// budget. A maxLen of zero or less collapses only, never truncating.
+func TrimSQL(sql string, maxLen int) string {
+	collapsed := strings.Join(strings.Fields(sql), " ")
+	if maxLen <= 0 {
+		return collapsed
+	}
+
+	runes := []rune(collapsed)
+	if len(runes) <= maxLen {
+		return collapsed
+	}
+	if maxLen == 1 {
+		return "…"
+	}
+	return string(runes[:maxLen-1]) + "…"
 }

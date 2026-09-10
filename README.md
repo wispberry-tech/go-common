@@ -156,6 +156,37 @@ ctx := common.WithContext(r.Context(), logger)
 logger := common.FromContext(ctx)
 ```
 
+### Request Logging
+
+Wrap your router with `RequestLogger` to log one line per request (method, path, status, bytes, duration) with a request ID. Works with any net/http router (chi, stdlib mux, …):
+
+```go
+http.ListenAndServe(":8080", common.RequestLogger(mux))
+```
+
+An incoming `X-Request-ID` header is honored; otherwise a random ID is generated and attached to the request context:
+
+```go
+id := common.RequestID(r.Context()) // "" when absent
+ctx := common.WithRequestID(r.Context(), id)
+```
+
+### SQL Trimming
+
+Collapse multi-line SQL into a single line for slow-query logs, optionally truncated rune-safely to `maxLen` with a trailing `…` (`maxLen <= 0` disables truncation):
+
+```go
+common.LogInfo("slow query", "sql", common.TrimSQL(query, 200))
+```
+
+### Log Format
+
+`LOG_FORMAT` controls the output format in `InitializeLogger`:
+
+- `LOG_FORMAT=json` — JSON output.
+- `LOG_FORMAT=text` — colored text output.
+- unset — JSON when stderr is not a terminal (containers, CI), colored text otherwise.
+
 ## Validation
 
 Request validation using [go-playground/validator](https://github.com/go-playground/validator), with automatic conversion of validation errors to API-friendly responses.
